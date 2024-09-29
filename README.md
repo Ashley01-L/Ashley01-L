@@ -1,52 +1,52 @@
-"""Bounce, a simple animation demo.
+package config
 
-Exercises
+import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+)
 
-1. Make the ball speed up and down.
-2. Change how the ball bounces when it hits a wall.
-3. Make the ball leave a trail.
-4. Change the ball color based on position.
-   Hint: colormode(255); color(0, 100, 200)
-"""
+// ExtraRelationship defines additional information which can be
+// extracted after an initial relationship is detected.
+type ExtraRelationship struct {
+	Name   string `json:"name"`
+	Regex  string `json:"regex"`
+	Rollup bool   `json:"rollup"`
+}
 
-from random import *
-from turtle import *
+// Relationship defines a section of a page that can be extract to provide a
+// unique identifier relationship.
+type Relationship struct {
+	Name                   string              `json:"name"`
+	TriggerIdentifierRegex string              `json:"triggeridentifierregex"`
+	ExtraRelationships     []ExtraRelationship `json:"extrarelationships"`
+}
 
-from freegames import vector
+// CrawlConfig defines user-specified options to tweak the current crawl.
+type CrawlConfig struct {
+	Onion         string         `json:"onion"`
+	Base          string         `json:"base"`
+	Exclude       []string       `json:"exclude"`
+	Relationships []Relationship `json:"relationships"`
+}
 
+// GetRelationship provides a Relationship by its name.
+func (cc *CrawlConfig) GetRelationship(name string) (Relationship, error) {
+	for _, relationship := range cc.Relationships {
+		if relationship.Name == name {
+			return relationship, nil
+		}
+	}
+	return Relationship{}, fmt.Errorf(`Could not find Relationship "%s"`, name)
+}
 
-def value():
-    """Randomly generate value between (-5, -3) or (3, 5)."""
-    return (3 + random() * 2) * choice([1, -1])
-
-
-ball = vector(0, 0)
-aim = vector(value(), value())
-
-
-def draw():
-    """Move ball and draw game."""
-    ball.move(aim)
-
-    x = ball.x
-    y = ball.y
-
-    if x < -200 or x > 200:
-        aim.x = -aim.x
-
-    if y < -200 or y > 200:
-        aim.y = -aim.y
-
-    clear()
-    goto(x, y)
-    dot(10)
-
-    ontimer(draw, 50)
-
-
-setup(420, 420, 370, 0)
-hideturtle()
-tracer(False)
-up()
-draw()
-done()
+// LoadCrawlConfig creates a CrawlConfig object by loading a given filename.
+func LoadCrawlConfig(filename string) (CrawlConfig, error) {
+	dat, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return CrawlConfig{}, err
+	}
+	res := CrawlConfig{}
+	err = json.Unmarshal(dat, &res)
+	return res, err
+}
